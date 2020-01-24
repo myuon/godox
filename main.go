@@ -1,10 +1,11 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"go/ast"
-	"golang.org/x/tools/go/analysis"
-	"golang.org/x/tools/go/analysis/singlechecker"
+	"go/parser"
+	"go/token"
 	"strings"
 )
 
@@ -51,11 +52,10 @@ type FileDox struct {
 	Decls   []Decl
 }
 
-// This is run function.
-func run(pass *analysis.Pass) (interface{}, error) {
+func Run(files []*ast.File) ([]FileDox, error) {
 	var doxs []FileDox
 
-	for _, file := range pass.Files {
+	for _, file := range files {
 		if file == nil {
 			continue
 		}
@@ -76,12 +76,9 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			Decls:   decls,
 		}
 		doxs = append(doxs, dox)
-
-		fmt.Println(dox.Text())
 	}
-	fmt.Printf("%+v", doxs)
 
-	return nil, nil
+	return doxs, nil
 }
 
 func (dox *FileDox) Text() string {
@@ -122,9 +119,33 @@ func %s(%v) (%s)
 }
 
 func main() {
-	singlechecker.Main(&analysis.Analyzer{
-		Name: "godox",
-		Doc:  "document tool for golang",
-		Run:  run,
-	})
+	fset := token.NewFileSet()
+	serveFlag := flag.Bool("s", false, "serve a web server")
+	flag.Parse()
+	args := flag.Args()
+
+	packages, err := parser.ParseDir(fset, args[0], nil, parser.AllErrors)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, pkg := range packages {
+		var files []*ast.File
+		for _, file := range pkg.Files {
+			files = append(files, file)
+		}
+
+		doxs, err := Run(files)
+		if err != nil {
+			panic(err)
+		}
+
+		for _, dox := range doxs {
+			println(dox.Text())
+		}
+	}
+
+	if *serveFlag {
+		println("server mode")
+	}
 }
