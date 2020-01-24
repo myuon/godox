@@ -6,6 +6,9 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"html/template"
+	"log"
+	"net/http"
 	"strings"
 )
 
@@ -143,23 +146,42 @@ func main() {
 		panic(err)
 	}
 
-	for _, pkg := range packages {
-		var files []*ast.File
-		for _, file := range pkg.Files {
-			files = append(files, file)
-		}
-
-		doxs, err := Run(files)
-		if err != nil {
-			panic(err)
-		}
-
-		for _, dox := range doxs {
-			println(dox.Text())
-		}
-	}
-
 	if *serveFlag {
-		println("server mode")
+		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			tpl := template.Must(template.ParseFiles("./template/index.html"))
+
+			for _, pkg := range packages {
+				var files []*ast.File
+				for _, file := range pkg.Files {
+					files = append(files, file)
+				}
+
+				doxs, err := Run(files)
+				if err != nil {
+					panic(err)
+				}
+
+				for _, dox := range doxs {
+					tpl.Execute(w, dox.GetStat())
+				}
+			}
+		})
+		log.Fatal(http.ListenAndServe(":8080", nil))
+	} else {
+		for _, pkg := range packages {
+			var files []*ast.File
+			for _, file := range pkg.Files {
+				files = append(files, file)
+			}
+
+			doxs, err := Run(files)
+			if err != nil {
+				panic(err)
+			}
+
+			for _, dox := range doxs {
+				println(dox.Text())
+			}
+		}
 	}
 }

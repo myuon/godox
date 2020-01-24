@@ -2,8 +2,16 @@
 <html>
   <head></head>
   <body>
-    <h1>Functions</h1>
+    <h1>GoDox</h1>
 
-    {{ .Func }}
+    <h2>Functions</h2>
+    {{ range $k, $v := .Index }}
+      <p>{{ $v }}</p>
+    {{ end }}
+
+    <h2>Content</h2>
+    {{ range $k, $v := .Content }}
+      <p>{{ $v }}</p>
+    {{ end }}
   </body>
 </html>
