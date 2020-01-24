@@ -81,7 +81,12 @@ func Run(files []*ast.File) ([]FileDox, error) {
 	return doxs, nil
 }
 
-func (dox *FileDox) Text() string {
+type Stat struct {
+	Index   []string
+	Content []string
+}
+
+func (dox *FileDox) GetStat() Stat {
 	var index []string
 	var content []string
 
@@ -107,6 +112,15 @@ func %s(%v) (%s)
 		}
 	}
 
+	return Stat{
+		Index:   index,
+		Content: content,
+	}
+}
+
+func (dox *FileDox) Text() string {
+	stat := dox.GetStat()
+
 	return fmt.Sprintf(`==========
 = file: %s
 
@@ -115,7 +129,7 @@ func %s(%v) (%s)
 
 = Content
 %v
-`, dox.Name, strings.Join(index, "\n"), strings.Join(content, "\n"))
+`, dox.Name, strings.Join(stat.Index, "\n"), strings.Join(stat.Content, "\n"))
 }
 
 func main() {
