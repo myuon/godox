@@ -12,6 +12,7 @@ import (
 	"strings"
 )
 
+// A helper function that shows names of idents.
 func ShowNames(idents []*ast.Ident) []string {
 	var names []string
 	for _, ident := range idents {
@@ -25,12 +26,14 @@ func ShowNames(idents []*ast.Ident) []string {
 	return names
 }
 
+// Function declaration
 type FuncDecl struct {
 	Name string
 	Type ast.FuncType
 	Doc  string
 }
 
+// Make a new FuncDecl from ast.FuncDecl
 func NewFuncDecl(ast ast.FuncDecl) FuncDecl {
 	return FuncDecl{
 		Name: ast.Name.Name,
@@ -39,22 +42,27 @@ func NewFuncDecl(ast ast.FuncDecl) FuncDecl {
 	}
 }
 
+// Decl is a large union of possible declarations.
+// It has many pointers but only one could be non-nil at the same time.
 type Decl struct {
 	Func *FuncDecl
 }
 
+// Make a new decl from FuncDecl
 func NewDeclFromFunc(val FuncDecl) Decl {
 	return Decl{
 		Func: &val,
 	}
 }
 
+// FileDox represents an analyzed result of an ast.File
 type FileDox struct {
 	Name    string
 	FileDoc string
 	Decls   []Decl
 }
 
+// Create an array of FileDox
 func Run(files []*ast.File) ([]FileDox, error) {
 	var doxs []FileDox
 
@@ -84,11 +92,13 @@ func Run(files []*ast.File) ([]FileDox, error) {
 	return doxs, nil
 }
 
+// Stat for templates
 type Stat struct {
 	Index   []string
 	Content []string
 }
 
+// Calculate Stat from FileDox
 func (dox *FileDox) GetStat() Stat {
 	var index []string
 	var content []string
@@ -121,6 +131,7 @@ func %s(%v) (%s)
 	}
 }
 
+// Shows in text
 func (dox *FileDox) Text() string {
 	stat := dox.GetStat()
 
@@ -141,7 +152,7 @@ func main() {
 	flag.Parse()
 	args := flag.Args()
 
-	packages, err := parser.ParseDir(fset, args[0], nil, parser.AllErrors)
+	packages, err := parser.ParseDir(fset, args[0], nil, parser.ParseComments)
 	if err != nil {
 		panic(err)
 	}
