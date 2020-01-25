@@ -35,12 +35,17 @@ type FuncDecl struct {
 }
 
 // Make a new FuncDecl from ast.FuncDecl
-func NewFuncDecl(ast ast.FuncDecl) FuncDecl {
+func NewFuncDecl(val ast.FuncDecl) FuncDecl {
+	var results []*ast.Field
+	if val.Type.Results != nil {
+		results = val.Type.Results.List
+	}
+
 	return FuncDecl{
-		Name:    ast.Name.Name,
-		Params:  ast.Type.Params.List,
-		Results: ast.Type.Results.List,
-		Doc:     ast.Doc.Text(),
+		Name:    val.Name.Name,
+		Params:  val.Type.Params.List,
+		Results: results,
+		Doc:     val.Doc.Text(),
 	}
 }
 
@@ -121,9 +126,9 @@ func (dox *FileDox) GetStat() Stat {
 
 			index = append(index, decl.Func.Name)
 			content = append(content, fmt.Sprintf(`== %s
-func %s(%v) (%s)
+func %s(%s) (%s)
 %s
-`, decl.Func.Name, decl.Func.Name, args, strings.Join(results, ", "), decl.Func.Doc))
+`, decl.Func.Name, decl.Func.Name, strings.Join(args, ", "), strings.Join(results, ", "), decl.Func.Doc))
 		}
 	}
 
