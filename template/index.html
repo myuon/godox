@@ -1,17 +1,95 @@
 <!DOCTYPE html>
 <html>
-  <head></head>
+  <head>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/ress/dist/ress.min.css"
+      type="text/css"
+    />
+    <style type="text/css">
+      html {
+        font-size: 16px;
+      }
+
+      main {
+        max-width: 1024px;
+      }
+
+      h1 {
+        font-size: 3rem;
+        line-height: calc(4 * 24px);
+      }
+
+      h2 {
+        font-size: 2rem;
+        line-height: calc(3 * 24px);
+      }
+
+      p {
+        font-size: 1rem;
+        line-height: calc(1 * 24px);
+      }
+
+      code {
+        font-family: "Courier New", Courier, monospace;
+        line-height: calc(1 * 24px);
+      }
+
+      .function {
+        margin-top: 2rem;
+      }
+
+      .function .header {
+        margin-top: 0.5rem;
+        font-weight: bolder;
+      }
+
+      .function > div {
+        margin-top: 0.5rem;
+      }
+
+      main > section {
+        margin: 0.5rem;
+      }
+
+      .index-functions > header {
+        font-weight: bold;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        padding-bottom: 0.25rem;
+        margin-bottom: 0.25rem;
+      }
+
+      .type {
+        background: rgba(0, 0, 0, 0.05);
+        padding: 0.5rem;
+      }
+    </style>
+  </head>
   <body>
-    <h1>GoDox</h1>
+    <header>
+      <h1>GoDox</h1>
+    </header>
 
-    <h2>Functions</h2>
-    {{ range $k, $v := .Index }}
-      <p>{{ $v }}</p>
-    {{ end }}
+    <main>
+      <section class="index-functions">
+        <header><h3>Functions</h3></header>
+        {{ range $k, $v := .Index }}
+        <p><a href="#{{ $v }}">{{ $v }}</a></p>
+        {{ end }}
+      </section>
 
-    <h2>Content</h2>
-    {{ range $k, $v := .Content }}
-      <p>{{ $v }}</p>
-    {{ end }}
+      <section>
+        {{ range $k, $v := .Content }}
+        <div class="function" id="{{ $v.Name }}">
+          <header><strong>func</strong> {{ $v.Name }}</header>
+          <div class="type">
+            <code>{{ $v.Type }}</code>
+          </div>
+          <div><p>{{ $v.Doc }}</p></div>
+        </div>
+        {{ end }}
+      </section>
+    </main>
   </body>
 </html>

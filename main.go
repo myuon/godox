@@ -99,16 +99,22 @@ func Run(files []*ast.File) ([]FileDox, error) {
 	return doxs, nil
 }
 
+type Content struct {
+	Name string
+	Type string
+	Doc  string
+}
+
 // Stat for templates
 type Stat struct {
 	Index   []string
-	Content []string
+	Content []Content
 }
 
 // Calculate Stat from FileDox
 func (dox *FileDox) GetStat() Stat {
 	var index []string
-	var content []string
+	var content []Content
 
 	for _, decl := range dox.Decls {
 		if decl.Func != nil {
@@ -125,10 +131,11 @@ func (dox *FileDox) GetStat() Stat {
 			}
 
 			index = append(index, decl.Func.Name)
-			content = append(content, fmt.Sprintf(`== %s
-func %s(%s) (%s)
-%s
-`, decl.Func.Name, decl.Func.Name, strings.Join(args, ", "), strings.Join(results, ", "), decl.Func.Doc))
+			content = append(content, Content{
+				Name: decl.Func.Name,
+				Type: fmt.Sprintf("func %s(%s) (%s)", decl.Func.Name, strings.Join(args, ", "), strings.Join(results, ", ")),
+				Doc:  decl.Func.Doc,
+			})
 		}
 	}
 
@@ -150,7 +157,7 @@ func (dox *FileDox) Text() string {
 
 = Content
 %v
-`, dox.Name, strings.Join(stat.Index, "\n"), strings.Join(stat.Content, "\n"))
+`, dox.Name, strings.Join(stat.Index, "\n"), stat.Content)
 }
 
 func main() {
