@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <link
       rel="stylesheet"
       href="https://unpkg.com/ress/dist/ress.min.css"
@@ -10,10 +10,12 @@
     <style type="text/css">
       html {
         font-size: 16px;
+        font-family: Arial, Helvetica, sans-serif;
       }
 
       main {
         max-width: 1024px;
+        margin: 0 auto;
       }
 
       h1 {
@@ -53,7 +55,7 @@
         margin: 0.5rem;
       }
 
-      .index-functions > header {
+      .go-elements > header {
         font-weight: bold;
         border-bottom: 1px solid rgba(0, 0, 0, 0.1);
         padding-bottom: 0.25rem;
@@ -64,6 +66,23 @@
         background: rgba(0, 0, 0, 0.05);
         padding: 0.5rem;
       }
+
+      table {
+        border-spacing: 1rem 0.5em;
+      }
+
+      .go-elements a {
+        text-decoration: none;
+        font-weight: bolder;
+      }
+
+      .index-functions a {
+        color: #DC5754;
+      }
+
+      .type-declarations a {
+        color: #5C9E93;
+      }
     </style>
   </head>
   <body>
@@ -72,15 +91,36 @@
     </header>
 
     <main>
-      <section class="index-functions">
+      <section class="go-elements index-functions">
         <header><h3>Functions</h3></header>
-        {{ range $k, $v := .Index }}
-        <p><a href="#{{ $v }}">{{ $v }}</a></p>
-        {{ end }}
+        <table>
+          <tbody>
+            {{ range $k, $v := .Funcs }}
+            <tr>
+              <td><a href="#{{ $v.Name }}">{{ $v.Name }}</a></td>
+              <td>{{ $v.Doc }}</td>
+            </tr>
+            {{ end }}
+          </tbody>
+        </table>
+      </section>
+
+      <section class="go-elements type-declarations">
+        <header><h3>Types</h3></header>
+        <table>
+          <tbody>
+            {{ range $k, $v := .Types }}
+            <tr>
+              <td><a href="#{{ $v.Name }}">{{ $v.Name }}</a></td>
+              <td>{{ $v.Doc }}</td>
+            </tr>
+            {{ end }}
+          </tbody>
+        </table>
       </section>
 
       <section>
-        {{ range $k, $v := .Content }}
+        {{ range $k, $v := .Funcs }}
         <div class="function" id="{{ $v.Name }}">
           <header><strong>func</strong> {{ $v.Name }}</header>
           <div class="type">

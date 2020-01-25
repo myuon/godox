@@ -49,16 +49,37 @@ func NewFuncDecl(val ast.FuncDecl) FuncDecl {
 	}
 }
 
+// Struct declaration
+type StructDecl struct {
+	Name string
+	Doc  string
+}
+
+func NewStructDecl(val ast.TypeSpec, doc *ast.CommentGroup) StructDecl {
+	return StructDecl{
+		Name: val.Name.Name,
+		Doc:  doc.Text(),
+	}
+}
+
 // Decl is a large union of possible declarations.
 // It has many pointers but only one could be non-nil at the same time.
 type Decl struct {
-	Func *FuncDecl
+	Func   *FuncDecl
+	Struct *StructDecl
 }
 
 // Make a new decl from FuncDecl
 func NewDeclFromFunc(val FuncDecl) Decl {
 	return Decl{
 		Func: &val,
+	}
+}
+
+// Make a new decl from StructDecl
+func NewDeclFromStruct(val StructDecl) Decl {
+	return Decl{
+		Struct: &val,
 	}
 }
 
@@ -83,6 +104,11 @@ func Run(files []*ast.File) ([]FileDox, error) {
 			switch decl := decl.(type) {
 			case *ast.FuncDecl:
 				decls = append(decls, NewDeclFromFunc(NewFuncDecl(*decl)))
+			case *ast.GenDecl:
+				switch spec := decl.Specs[0].(type) {
+				case *ast.TypeSpec:
+					decls = append(decls, NewDeclFromStruct(NewStructDecl(*spec, decl.Doc)))
+				}
 			default:
 				continue
 			}
@@ -107,14 +133,16 @@ type Content struct {
 
 // Stat for templates
 type Stat struct {
-	Index   []string
-	Content []Content
+	Index []string
+	Funcs []Content
+	Types []Content
 }
 
 // Calculate Stat from FileDox
 func (dox *FileDox) GetStat() Stat {
 	var index []string
-	var content []Content
+	var funcs []Content
+	var types []Content
 
 	for _, decl := range dox.Decls {
 		if decl.Func != nil {
@@ -131,17 +159,29 @@ func (dox *FileDox) GetStat() Stat {
 			}
 
 			index = append(index, decl.Func.Name)
-			content = append(content, Content{
-				Name: decl.Func.Name,
-				Type: fmt.Sprintf("func %s(%s) (%s)", decl.Func.Name, strings.Join(args, ", "), strings.Join(results, ", ")),
-				Doc:  decl.Func.Doc,
+
+			if decl.Func != nil {
+				funcs = append(funcs, Content{
+					Name: decl.Func.Name,
+					Type: fmt.Sprintf("func %s(%s) (%s)", decl.Func.Name, strings.Join(args, ", "), strings.Join(results, ", ")),
+					Doc:  decl.Func.Doc,
+				})
+			}
+		}
+
+		if decl.Struct != nil {
+			types = append(types, Content{
+				Name: decl.Struct.Name,
+				Type: "",
+				Doc:  decl.Struct.Doc,
 			})
 		}
 	}
 
 	return Stat{
-		Index:   index,
-		Content: content,
+		Index: index,
+		Funcs: funcs,
+		Types: types,
 	}
 }
 
@@ -157,7 +197,7 @@ func (dox *FileDox) Text() string {
 
 = Content
 %v
-`, dox.Name, strings.Join(stat.Index, "\n"), stat.Content)
+`, dox.Name, strings.Join(stat.Index, "\n"), stat.Funcs)
 }
 
 func main() {
