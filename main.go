@@ -28,17 +28,19 @@ func ShowNames(idents []*ast.Ident) []string {
 
 // Function declaration
 type FuncDecl struct {
-	Name string
-	Type ast.FuncType
-	Doc  string
+	Name    string
+	Params  []*ast.Field
+	Results []*ast.Field
+	Doc     string
 }
 
 // Make a new FuncDecl from ast.FuncDecl
 func NewFuncDecl(ast ast.FuncDecl) FuncDecl {
 	return FuncDecl{
-		Name: ast.Name.Name,
-		Type: *ast.Type,
-		Doc:  ast.Doc.Text(),
+		Name:    ast.Name.Name,
+		Params:  ast.Type.Params.List,
+		Results: ast.Type.Results.List,
+		Doc:     ast.Doc.Text(),
 	}
 }
 
@@ -106,13 +108,13 @@ func (dox *FileDox) GetStat() Stat {
 	for _, decl := range dox.Decls {
 		if decl.Func != nil {
 			var args []string
-			for _, param := range decl.Func.Type.Params.List {
+			for _, param := range decl.Func.Params {
 				args = append(args, fmt.Sprintf("%v %v", param.Names[0].Name, param.Type))
 			}
 
 			var results []string
-			if decl.Func.Type.Results != nil {
-				for _, param := range decl.Func.Type.Results.List {
+			if decl.Func.Results != nil {
+				for _, param := range decl.Func.Results {
 					results = append(results, fmt.Sprintf("%v", param.Type))
 				}
 			}
