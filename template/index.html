@@ -83,6 +83,10 @@
       .type-declarations a {
         color: #5C9E93;
       }
+
+      .var-declarations a {
+        color: #217092;
+      }
     </style>
   </head>
   <body>
@@ -114,6 +118,28 @@
               <td><a href="#{{ $v.Name }}">{{ $v.Name }}</a></td>
               <td>{{ $v.Doc }}</td>
             </tr>
+            {{ end }}
+          </tbody>
+        </table>
+      </section>
+
+      <section class="go-elements var-declarations">
+        <header><h3>Variables</h3></header>
+        <table>
+          <tbody>
+            {{ range $k, $v := .Vars }}
+            <tr>
+              <td>-</td>
+              <td>{{ $v.Doc }}</td>
+            </tr>
+              {{ range $k, $c := $v.Contents }}
+                {{ range $k, $name := $c.Names }}
+                <tr>
+                  <td><a href="#{{ $name }}">{{ $name }}</a></td>
+                  <td>{{ $c.Doc }}</td>
+                </tr>
+                {{ end }}
+              {{ end }}
             {{ end }}
           </tbody>
         </table>

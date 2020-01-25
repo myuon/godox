@@ -12,6 +12,12 @@ import (
 	"strings"
 )
 
+// Define configurations
+var (
+	// Path to template file
+	TemplatePath = "./template/index.html"
+)
+
 // A helper function that shows names of idents.
 func ShowNames(idents []*ast.Ident) []string {
 	var names []string
@@ -62,11 +68,39 @@ func NewStructDecl(val ast.TypeSpec, doc *ast.CommentGroup) StructDecl {
 	}
 }
 
+// Var declaration
+type VarDecl struct {
+	Doc  string
+	Vars []VarLine
+}
+
+// Var line
+type VarLine struct {
+	Names []string
+	Doc   string
+}
+
+func NewVarDecl(vals []*ast.ValueSpec, doc *ast.CommentGroup) VarDecl {
+	var vs []VarLine
+	for _, val := range vals {
+		vs = append(vs, VarLine{
+			Names: ShowNames(val.Names),
+			Doc:   val.Doc.Text(),
+		})
+	}
+
+	return VarDecl{
+		Doc:  doc.Text(),
+		Vars: vs,
+	}
+}
+
 // Decl is a large union of possible declarations.
 // It has many pointers but only one could be non-nil at the same time.
 type Decl struct {
 	Func   *FuncDecl
 	Struct *StructDecl
+	Var    *VarDecl
 }
 
 // Make a new decl from FuncDecl
@@ -80,6 +114,13 @@ func NewDeclFromFunc(val FuncDecl) Decl {
 func NewDeclFromStruct(val StructDecl) Decl {
 	return Decl{
 		Struct: &val,
+	}
+}
+
+// Make a new decl from VarDecl
+func NewDeclFromVar(val VarDecl) Decl {
+	return Decl{
+		Var: &val,
 	}
 }
 
@@ -105,9 +146,17 @@ func Run(files []*ast.File) ([]FileDox, error) {
 			case *ast.FuncDecl:
 				decls = append(decls, NewDeclFromFunc(NewFuncDecl(*decl)))
 			case *ast.GenDecl:
-				switch spec := decl.Specs[0].(type) {
-				case *ast.TypeSpec:
-					decls = append(decls, NewDeclFromStruct(NewStructDecl(*spec, decl.Doc)))
+				if decl.Tok.String() == "type" {
+					decls = append(decls, NewDeclFromStruct(NewStructDecl(*decl.Specs[0].(*ast.TypeSpec), decl.Doc)))
+				}
+
+				if decl.Tok.String() == "var" {
+					var specs []*ast.ValueSpec
+					for _, spec := range decl.Specs {
+						specs = append(specs, spec.(*ast.ValueSpec))
+					}
+
+					decls = append(decls, NewDeclFromVar(NewVarDecl(specs, decl.Doc)))
 				}
 			default:
 				continue
@@ -131,11 +180,22 @@ type Content struct {
 	Doc  string
 }
 
+type NamesContent struct {
+	Names []string
+	Doc   string
+}
+
+type Section struct {
+	Doc      string
+	Contents []NamesContent
+}
+
 // Stat for templates
 type Stat struct {
 	Index []string
 	Funcs []Content
 	Types []Content
+	Vars  []Section
 }
 
 // Calculate Stat from FileDox
@@ -143,6 +203,7 @@ func (dox *FileDox) GetStat() Stat {
 	var index []string
 	var funcs []Content
 	var types []Content
+	var vars []Section
 
 	for _, decl := range dox.Decls {
 		if decl.Func != nil {
@@ -176,12 +237,28 @@ func (dox *FileDox) GetStat() Stat {
 				Doc:  decl.Struct.Doc,
 			})
 		}
+
+		if decl.Var != nil {
+			var cs []NamesContent
+			for _, v := range decl.Var.Vars {
+				cs = append(cs, NamesContent{
+					Names: v.Names,
+					Doc:   v.Doc,
+				})
+			}
+
+			vars = append(vars, Section{
+				Doc:      decl.Var.Doc,
+				Contents: cs,
+			})
+		}
 	}
 
 	return Stat{
 		Index: index,
 		Funcs: funcs,
 		Types: types,
+		Vars:  vars,
 	}
 }
 
@@ -213,7 +290,7 @@ func main() {
 
 	if *serveFlag {
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			tpl := template.Must(template.ParseFiles("./template/index.html"))
+			tpl := template.Must(template.ParseFiles(TemplatePath))
 
 			for _, pkg := range packages {
 				var files []*ast.File
