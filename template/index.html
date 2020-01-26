@@ -77,11 +77,11 @@
       }
 
       .index-functions a {
-        color: #DC5754;
+        color: #dc5754;
       }
 
       .type-declarations a {
-        color: #5C9E93;
+        color: #5c9e93;
       }
 
       .var-declarations a {
@@ -95,6 +95,10 @@
     </header>
 
     <main>
+      <section>
+        <header><strong>package</strong> {{ .Package }}</header>
+      </section>
+
       <section class="go-elements index-functions">
         <header><h3>Functions</h3></header>
         <table>
@@ -132,15 +136,12 @@
               <td>-</td>
               <td>{{ $v.Doc }}</td>
             </tr>
-              {{ range $k, $c := $v.Contents }}
-                {{ range $k, $name := $c.Names }}
-                <tr>
-                  <td><a href="#{{ $name }}">{{ $name }}</a></td>
-                  <td>{{ $c.Doc }}</td>
-                </tr>
-                {{ end }}
-              {{ end }}
-            {{ end }}
+            {{ range $k, $c := $v.Contents }} {{ range $k, $name := $c.Names }}
+            <tr>
+              <td><a href="#{{ $name }}">{{ $name }}</a></td>
+              <td>{{ $c.Doc }}</td>
+            </tr>
+            {{ end }} {{ end }} {{ end }}
           </tbody>
         </table>
       </section>
@@ -154,9 +155,7 @@
           </div>
           <div><p>{{ $v.Doc }}</p></div>
         </div>
-        {{ end }}
-
-        {{ range $k, $v := .Types }}
+        {{ end }} {{ range $k, $v := .Types }}
         <div class="function" id="{{ $v.Name }}">
           <header><strong>type</strong> {{ $v.Name }}</header>
           <div><p>{{ $v.Doc }}</p></div>

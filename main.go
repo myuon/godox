@@ -183,13 +183,14 @@ func NewDeclFromVar(val VarDecl) Decl {
 
 // FileDox represents an analyzed result of an ast.File
 type FileDox struct {
+	Package string
 	Name    string
 	FileDoc string
 	Decls   []Decl
 }
 
 // Create an array of FileDox
-func Run(files []*ast.File) ([]FileDox, error) {
+func Run(pkgName string, files []*ast.File) ([]FileDox, error) {
 	var doxs []FileDox
 
 	for _, file := range files {
@@ -221,6 +222,7 @@ func Run(files []*ast.File) ([]FileDox, error) {
 		}
 
 		dox := FileDox{
+			Package: pkgName,
 			Name:    file.Name.String(),
 			FileDoc: file.Doc.Text(),
 			Decls:   decls,
@@ -249,10 +251,11 @@ type Section struct {
 
 // Stat for templates
 type Stat struct {
-	Index []string
-	Funcs []Content
-	Types []Content
-	Vars  []Section
+	Package string
+	Index   []string
+	Funcs   []Content
+	Types   []Content
+	Vars    []Section
 }
 
 // Calculate Stat from FileDox
@@ -310,10 +313,11 @@ func (dox *FileDox) GetStat() (Stat, error) {
 	}
 
 	return Stat{
-		Index: index,
-		Funcs: funcs,
-		Types: types,
-		Vars:  vars,
+		Package: dox.Package,
+		Index:   index,
+		Funcs:   funcs,
+		Types:   types,
+		Vars:    vars,
 	}, nil
 }
 
@@ -350,13 +354,13 @@ func main() {
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			tpl := template.Must(template.ParseFiles(TemplatePath))
 
-			for _, pkg := range packages {
+			for pkgName, pkg := range packages {
 				var files []*ast.File
 				for _, file := range pkg.Files {
 					files = append(files, file)
 				}
 
-				doxs, err := Run(files)
+				doxs, err := Run(pkgName, files)
 				if err != nil {
 					panic(err)
 				}
@@ -373,13 +377,13 @@ func main() {
 		})
 		log.Fatal(http.ListenAndServe(":8080", nil))
 	} else {
-		for _, pkg := range packages {
+		for pkgName, pkg := range packages {
 			var files []*ast.File
 			for _, file := range pkg.Files {
 				files = append(files, file)
 			}
 
-			doxs, err := Run(files)
+			doxs, err := Run(pkgName, files)
 			if err != nil {
 				panic(err)
 			}
