@@ -34,9 +34,50 @@ func (t *TypeWrapper) Text() (string, error) {
 		return fmt.Sprintf("[]%s", r), nil
 	case *ast.Ident:
 		return t.Name, nil
+	case *ast.StarExpr:
+		r, err := (&TypeWrapper{Expr: t.X}).Text()
+		if err != nil {
+			return "", err
+		}
+
+		return fmt.Sprintf("*%s", r), nil
+	case *ast.SelectorExpr:
+		r, err := (&TypeWrapper{Expr: t.X}).Text()
+		if err != nil {
+			return "", err
+		}
+
+		return fmt.Sprintf("%s.%s", r, t.Sel.Name), nil
 	default:
 		return "", fmt.Errorf("Not yet implemented: %+v", t)
 	}
+}
+
+type FieldListWrapper struct {
+	*ast.FieldList
+}
+
+func (t *FieldListWrapper) Text() ([]string, error) {
+	if t == nil || t.FieldList == nil {
+		return nil, nil
+	}
+
+	var rep []string
+	for _, field := range t.List {
+		t := TypeWrapper{Expr: field.Type}
+		r, err := t.Text()
+		if err != nil {
+			return nil, err
+		}
+
+		if len(field.Names) == 0 {
+			rep = append(rep, r)
+		} else {
+			rep = append(rep, fmt.Sprintf("%s %s", strings.Join(ShowNames(field.Names), ","), r))
+		}
+	}
+
+	return rep, nil
 }
 
 // A helper function that shows names of idents.
@@ -56,22 +97,17 @@ func ShowNames(idents []*ast.Ident) []string {
 // Function declaration
 type FuncDecl struct {
 	Name    string
-	Params  []*ast.Field
-	Results []*ast.Field
+	Params  FieldListWrapper
+	Results FieldListWrapper
 	Doc     string
 }
 
 // Make a new FuncDecl from ast.FuncDecl
 func NewFuncDecl(val ast.FuncDecl) FuncDecl {
-	var results []*ast.Field
-	if val.Type.Results != nil {
-		results = val.Type.Results.List
-	}
-
 	return FuncDecl{
 		Name:    val.Name.Name,
-		Params:  val.Type.Params.List,
-		Results: results,
+		Params:  FieldListWrapper{FieldList: val.Type.Params},
+		Results: FieldListWrapper{FieldList: val.Type.Results},
 		Doc:     val.Doc.Text(),
 	}
 }
@@ -220,7 +256,7 @@ type Stat struct {
 }
 
 // Calculate Stat from FileDox
-func (dox *FileDox) GetStat() Stat {
+func (dox *FileDox) GetStat() (Stat, error) {
 	var index []string
 	var funcs []Content
 	var types []Content
@@ -228,22 +264,14 @@ func (dox *FileDox) GetStat() Stat {
 
 	for _, decl := range dox.Decls {
 		if decl.Func != nil {
-			var args []string
-			for _, param := range decl.Func.Params {
-				args = append(args, fmt.Sprintf("%v %v", param.Names[0].Name, param.Type))
+			args, err := decl.Func.Params.Text()
+			if err != nil {
+				return Stat{}, err
 			}
 
-			var results []string
-			if decl.Func.Results != nil {
-				for _, param := range decl.Func.Results {
-					t := &TypeWrapper{Expr: param.Type}
-					r, err := t.Text()
-					if err != nil {
-						panic(err)
-					}
-
-					results = append(results, r)
-				}
+			results, err := decl.Func.Results.Text()
+			if err != nil {
+				return Stat{}, err
 			}
 
 			index = append(index, decl.Func.Name)
@@ -286,12 +314,15 @@ func (dox *FileDox) GetStat() Stat {
 		Funcs: funcs,
 		Types: types,
 		Vars:  vars,
-	}
+	}, nil
 }
 
 // Shows in text
 func (dox *FileDox) Text() string {
-	stat := dox.GetStat()
+	stat, err := dox.GetStat()
+	if err != nil {
+		panic(err)
+	}
 
 	return fmt.Sprintf(`==========
 = file: %s
@@ -331,7 +362,12 @@ func main() {
 				}
 
 				for _, dox := range doxs {
-					tpl.Execute(w, dox.GetStat())
+					r, err := dox.GetStat()
+					if err != nil {
+						panic(err)
+					}
+
+					tpl.Execute(w, r)
 				}
 			}
 		})

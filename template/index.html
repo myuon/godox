@@ -155,6 +155,13 @@
           <div><p>{{ $v.Doc }}</p></div>
         </div>
         {{ end }}
+
+        {{ range $k, $v := .Types }}
+        <div class="function" id="{{ $v.Name }}">
+          <header><strong>type</strong> {{ $v.Name }}</header>
+          <div><p>{{ $v.Doc }}</p></div>
+        </div>
+        {{ end }}
       </section>
     </main>
   </body>
