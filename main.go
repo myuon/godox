@@ -18,6 +18,27 @@ var (
 	TemplatePath = "./template/index.html"
 )
 
+type TypeWrapper struct {
+	ast.Expr
+}
+
+func (t *TypeWrapper) Text() (string, error) {
+	switch t := t.Expr.(type) {
+	case *ast.ArrayType:
+		elt := &TypeWrapper{Expr: t.Elt}
+		r, err := elt.Text()
+		if err != nil {
+			return "", err
+		}
+
+		return fmt.Sprintf("[]%s", r), nil
+	case *ast.Ident:
+		return t.Name, nil
+	default:
+		return "", fmt.Errorf("Not yet implemented: %+v", t)
+	}
+}
+
 // A helper function that shows names of idents.
 func ShowNames(idents []*ast.Ident) []string {
 	var names []string
@@ -215,7 +236,13 @@ func (dox *FileDox) GetStat() Stat {
 			var results []string
 			if decl.Func.Results != nil {
 				for _, param := range decl.Func.Results {
-					results = append(results, fmt.Sprintf("%v", param.Type))
+					t := &TypeWrapper{Expr: param.Type}
+					r, err := t.Text()
+					if err != nil {
+						panic(err)
+					}
+
+					results = append(results, r)
 				}
 			}
 
