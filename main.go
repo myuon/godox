@@ -350,33 +350,7 @@ func main() {
 		panic(err)
 	}
 
-	if *serveFlag {
-		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			tpl := template.Must(template.ParseFiles(TemplatePath))
-
-			for pkgName, pkg := range packages {
-				var files []*ast.File
-				for _, file := range pkg.Files {
-					files = append(files, file)
-				}
-
-				doxs, err := Run(pkgName, files)
-				if err != nil {
-					panic(err)
-				}
-
-				for _, dox := range doxs {
-					r, err := dox.GetStat()
-					if err != nil {
-						panic(err)
-					}
-
-					tpl.Execute(w, r)
-				}
-			}
-		})
-		log.Fatal(http.ListenAndServe(":8080", nil))
-	} else {
+	iter := func(f func(dox FileDox)) {
 		for pkgName, pkg := range packages {
 			var files []*ast.File
 			for _, file := range pkg.Files {
@@ -389,8 +363,27 @@ func main() {
 			}
 
 			for _, dox := range doxs {
-				println(dox.Text())
+				f(dox)
 			}
 		}
+	}
+
+	if *serveFlag {
+		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			tpl := template.Must(template.ParseFiles(TemplatePath))
+			iter(func(dox FileDox) {
+				r, err := dox.GetStat()
+				if err != nil {
+					panic(err)
+				}
+
+				tpl.Execute(w, r)
+			})
+		})
+		log.Fatal(http.ListenAndServe(":8080", nil))
+	} else {
+		iter(func(dox FileDox) {
+			println(dox.Text())
+		})
 	}
 }
