@@ -6,9 +6,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"html/template"
-	"log"
-	"net/http"
 	"strings"
 )
 
@@ -339,51 +336,94 @@ func (dox *FileDox) Text() string {
 `, dox.Name, strings.Join(stat.Index, "\n"), stat.Funcs)
 }
 
-func main() {
+type Packages []Package
+
+type Package struct {
+	ast.Package
+}
+
+func LoadPackages(path string) (Packages, error) {
 	fset := token.NewFileSet()
-	serveFlag := flag.Bool("s", false, "serve a web server")
+	pkgs, err := parser.ParseDir(fset, path, nil, parser.ParseComments)
+	if err != nil {
+		return Packages{}, err
+	}
+
+	var pkgList []Package
+	for _, v := range pkgs {
+		pkgList = append(pkgList, Package{*v})
+	}
+
+	return Packages(pkgList), nil
+}
+
+func run(path string) error {
+	pkgs, err := LoadPackages(path)
+	if err != nil {
+		return err
+	}
+
+	for _, v := range pkgs {
+		fmt.Printf("%+v %+v\n", v.Name, v)
+	}
+
+	return nil
+}
+
+func main() {
 	flag.Parse()
 	args := flag.Args()
 
-	packages, err := parser.ParseDir(fset, args[0], nil, parser.ParseComments)
-	if err != nil {
+	if err := run(args[0]); err != nil {
 		panic(err)
 	}
 
-	iter := func(f func(dox FileDox)) {
-		for pkgName, pkg := range packages {
-			var files []*ast.File
-			for _, file := range pkg.Files {
-				files = append(files, file)
-			}
+	/*
+		fset := token.NewFileSet()
+		serveFlag := flag.Bool("s", false, "serve a web server")
+		flag.Parse()
+		args := flag.Args()
 
-			doxs, err := Run(pkgName, files)
-			if err != nil {
-				panic(err)
-			}
-
-			for _, dox := range doxs {
-				f(dox)
-			}
+		packages, err := parser.ParseDir(fset, args[0], nil, parser.ParseComments)
+		if err != nil {
+			panic(err)
 		}
-	}
 
-	if *serveFlag {
-		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			tpl := template.Must(template.ParseFiles(TemplatePath))
-			iter(func(dox FileDox) {
-				r, err := dox.GetStat()
+		iter := func(f func(dox FileDox)) {
+			for pkgName, pkg := range packages {
+				var files []*ast.File
+				for _, file := range pkg.Files {
+					files = append(files, file)
+				}
+
+				doxs, err := Run(pkgName, files)
 				if err != nil {
 					panic(err)
 				}
 
-				tpl.Execute(w, r)
+				for _, dox := range doxs {
+					f(dox)
+				}
+			}
+		}
+
+		if *serveFlag {
+			http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+				tpl := template.Must(template.ParseFiles(TemplatePath))
+				iter(func(dox FileDox) {
+					r, err := dox.GetStat()
+					if err != nil {
+						panic(err)
+					}
+
+					tpl.Execute(w, r)
+				})
 			})
-		})
-		log.Fatal(http.ListenAndServe(":8080", nil))
-	} else {
-		iter(func(dox FileDox) {
-			println(dox.Text())
-		})
-	}
+			log.Fatal(http.ListenAndServe(":8080", nil))
+		} else {
+			iter(func(dox FileDox) {
+				println(dox.Text())
+			})
+		}
+	*/
 }
