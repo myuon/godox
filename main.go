@@ -336,11 +336,41 @@ func (dox *FileDox) Text() string {
 `, dox.Name, strings.Join(stat.Index, "\n"), stat.Funcs)
 }
 
-type Packages []Package
+type File struct {
+	ast.File
+}
+
+func (file File) GetTypeSpecs() []ast.TypeSpec {
+	var specs []ast.TypeSpec
+	for _, decl := range file.Decls {
+		switch decl := decl.(type) {
+		case *ast.GenDecl:
+			// typeのときはspecは必ず長さ1？
+			if decl.Tok.String() == "type" {
+				specs = append(specs, *decl.Specs[0].(*ast.TypeSpec))
+			}
+		default:
+			continue
+		}
+	}
+
+	return specs
+}
 
 type Package struct {
 	ast.Package
 }
+
+func (pkg Package) Files() []File {
+	var files []File
+	for _, file := range pkg.Package.Files {
+		files = append(files, File{*file})
+	}
+
+	return files
+}
+
+type Packages []Package
 
 func LoadPackages(path string) (Packages, error) {
 	fset := token.NewFileSet()
@@ -357,15 +387,26 @@ func LoadPackages(path string) (Packages, error) {
 	return Packages(pkgList), nil
 }
 
+func (pkgs Packages) CollectTypes() map[string]string {
+	typs := map[string]string{}
+	for _, pkg := range pkgs {
+		for _, file := range pkg.Files() {
+			for _, t := range file.GetTypeSpecs() {
+				typs[t.Name.String()] = file.Name.String()
+			}
+		}
+	}
+
+	return typs
+}
+
 func run(path string) error {
 	pkgs, err := LoadPackages(path)
 	if err != nil {
 		return err
 	}
 
-	for _, v := range pkgs {
-		fmt.Printf("%+v %+v\n", v.Name, v)
-	}
+	fmt.Printf("%+v\n", pkgs.CollectTypes())
 
 	return nil
 }
