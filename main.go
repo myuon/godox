@@ -357,6 +357,49 @@ func (file File) GetTypeSpecs() []ast.TypeSpec {
 	return specs
 }
 
+func (file File) GetFuncDecls() []ast.FuncDecl {
+	var decls []ast.FuncDecl
+	for _, decl := range file.Decls {
+		switch decl := decl.(type) {
+		case *ast.FuncDecl:
+			decls = append(decls, *decl)
+		default:
+			continue
+		}
+	}
+
+	return decls
+}
+
+type ValueGroup struct {
+	Doc   *ast.CommentGroup
+	Specs []ast.ValueSpec
+}
+
+func (file File) GetValueGroups() []ValueGroup {
+	var groups []ValueGroup
+	for _, decl := range file.Decls {
+		switch decl := decl.(type) {
+		case *ast.GenDecl:
+			if decl.Tok.String() == "var" {
+				var specs []ast.ValueSpec
+				for _, spec := range decl.Specs {
+					specs = append(specs, *spec.(*ast.ValueSpec))
+				}
+
+				groups = append(groups, ValueGroup{
+					Doc:   decl.Doc,
+					Specs: specs,
+				})
+			}
+		default:
+			continue
+		}
+	}
+
+	return groups
+}
+
 type Package struct {
 	ast.Package
 }
@@ -407,6 +450,9 @@ func run(path string) error {
 	}
 
 	fmt.Printf("%+v\n", pkgs.CollectTypes())
+	fmt.Printf("%+v\n", pkgs[0].Files()[0].GetFuncDecls())
+	fmt.Printf("%+v\n", pkgs[0].Files()[0].GetTypeSpecs())
+	fmt.Printf("%+v\n", pkgs[0].Files()[0].GetValueGroups())
 
 	return nil
 }
