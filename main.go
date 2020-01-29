@@ -413,6 +413,33 @@ func (pkg Package) Files() []File {
 	return files
 }
 
+func (pkg Package) GetFuncDecls() []ast.FuncDecl {
+	var decls []ast.FuncDecl
+	for _, v := range pkg.Package.Files {
+		decls = append(decls, File{*v}.GetFuncDecls()...)
+	}
+
+	return decls
+}
+
+func (pkg Package) GetTypeSpecs() []ast.TypeSpec {
+	var specs []ast.TypeSpec
+	for _, v := range pkg.Package.Files {
+		specs = append(specs, File{*v}.GetTypeSpecs()...)
+	}
+
+	return specs
+}
+
+func (pkg Package) GetValueGroups() []ValueGroup {
+	var groups []ValueGroup
+	for _, v := range pkg.Package.Files {
+		groups = append(groups, File{*v}.GetValueGroups()...)
+	}
+
+	return groups
+}
+
 type Packages []Package
 
 func LoadPackages(path string) (Packages, error) {
@@ -450,14 +477,33 @@ func run(path string) error {
 	}
 
 	fmt.Printf("%+v\n", pkgs.CollectTypes())
-	fmt.Printf("%+v\n", pkgs[0].Files()[0].GetFuncDecls())
-	fmt.Printf("%+v\n", pkgs[0].Files()[0].GetTypeSpecs())
-	fmt.Printf("%+v\n", pkgs[0].Files()[0].GetValueGroups())
+
+	for _, pkg := range pkgs {
+		fmt.Printf("\nPackage %s\n=====\n", pkg.Name)
+
+		fmt.Printf("\n\nFunctions\n-----\n")
+		for _, decl := range pkg.GetFuncDecls() {
+			fmt.Printf("%s\t", decl.Name.String())
+		}
+
+		fmt.Printf("\n\nTypes\n-----\n")
+		for _, spec := range pkg.GetTypeSpecs() {
+			fmt.Printf("%s\t", spec.Name.String())
+		}
+
+		fmt.Printf("\n\nVariables\n-----\n")
+		for _, vg := range pkg.GetValueGroups() {
+			for _, spec := range vg.Specs {
+				fmt.Printf("%+v\n", spec.Names)
+			}
+		}
+	}
 
 	return nil
 }
 
 func main() {
+	_ = flag.Bool("s", false, "serve a web server")
 	flag.Parse()
 	args := flag.Args()
 
@@ -467,7 +513,6 @@ func main() {
 
 	/*
 		fset := token.NewFileSet()
-		serveFlag := flag.Bool("s", false, "serve a web server")
 		flag.Parse()
 		args := flag.Args()
 
