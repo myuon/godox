@@ -6,6 +6,8 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"html/template"
+	"net/http"
 	"strings"
 )
 
@@ -470,12 +472,7 @@ func (pkgs Packages) CollectTypes() map[string]string {
 	return typs
 }
 
-func run(path string) error {
-	pkgs, err := LoadPackages(path)
-	if err != nil {
-		return err
-	}
-
+func prints(pkgs Packages) error {
 	fmt.Printf("%+v\n", pkgs.CollectTypes())
 
 	for _, pkg := range pkgs {
@@ -502,60 +499,44 @@ func run(path string) error {
 	return nil
 }
 
+func serves(pkgs Packages) error {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		tpl := template.Must(template.ParseFiles(TemplatePath))
+
+		tpl.Execute(w, map[string]interface{}{
+			"packages": pkgs,
+		})
+	})
+	println("Listening on http://localhost:8080...")
+
+	return http.ListenAndServe(":8080", nil)
+}
+
+func run(path string, serveFlag bool) error {
+	pkgs, err := LoadPackages(path)
+	if err != nil {
+		return err
+	}
+
+	if serveFlag {
+		if err := prints(pkgs); err != nil {
+			return err
+		}
+	} else {
+		if err := serves(pkgs); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func main() {
-	_ = flag.Bool("s", false, "serve a web server")
+	serveFlag := flag.Bool("s", false, "serve a web server")
 	flag.Parse()
 	args := flag.Args()
 
-	if err := run(args[0]); err != nil {
+	if err := run(args[0], *serveFlag); err != nil {
 		panic(err)
 	}
-
-	/*
-		fset := token.NewFileSet()
-		flag.Parse()
-		args := flag.Args()
-
-		packages, err := parser.ParseDir(fset, args[0], nil, parser.ParseComments)
-		if err != nil {
-			panic(err)
-		}
-
-		iter := func(f func(dox FileDox)) {
-			for pkgName, pkg := range packages {
-				var files []*ast.File
-				for _, file := range pkg.Files {
-					files = append(files, file)
-				}
-
-				doxs, err := Run(pkgName, files)
-				if err != nil {
-					panic(err)
-				}
-
-				for _, dox := range doxs {
-					f(dox)
-				}
-			}
-		}
-
-		if *serveFlag {
-			http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-				tpl := template.Must(template.ParseFiles(TemplatePath))
-				iter(func(dox FileDox) {
-					r, err := dox.GetStat()
-					if err != nil {
-						panic(err)
-					}
-
-					tpl.Execute(w, r)
-				})
-			})
-			log.Fatal(http.ListenAndServe(":8080", nil))
-		} else {
-			iter(func(dox FileDox) {
-				println(dox.Text())
-			})
-		}
-	*/
 }
