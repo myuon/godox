@@ -96,6 +96,17 @@
 
     <main>
       <section>
+      {{ range $k, $pkg := .Packages }}
+        <header><strong>package</strong> {{ $pkg.Name }}</header>
+        <ul>
+        {{ range $k, $file := $pkg.Files }}
+          <li>{{ $file.Name }}.go</li>
+        {{ end }}
+        </ul>
+      {{ end }}
+      </section>
+
+      <section>
         <header><strong>package</strong> {{ .Package }}</header>
       </section>
 
