@@ -3,9 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"godox/astwrapper"
 	"html/template"
 	"net/http"
+
+	"github.com/myuon/godox/astwrapper"
 )
 
 // Define configurations
