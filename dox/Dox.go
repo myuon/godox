@@ -2,6 +2,7 @@ package dox
 
 import (
 	"encoding/json"
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -19,7 +20,7 @@ func LoadPackages(path string) (PackagesDox, error) {
 		pkgList = append(pkgList, *v)
 	}
 
-	return NewPackagesDox(pkgList), nil
+	return NewPackagesDox(pkgList)
 }
 
 type PackagesDox struct {
@@ -31,14 +32,19 @@ func (d PackagesDox) Json() (string, error) {
 	return string(out), err
 }
 
-func NewPackagesDox(pkgs []ast.Package) PackagesDox {
+func NewPackagesDox(pkgs []ast.Package) (PackagesDox, error) {
 	var dox []PackageDox
 
 	for _, pkg := range pkgs {
-		dox = append(dox, NewPackageDox(pkg))
+		p, err := NewPackageDox(pkg)
+		if err != nil {
+			return PackagesDox{}, err
+		}
+
+		dox = append(dox, p)
 	}
 
-	return PackagesDox{dox}
+	return PackagesDox{dox}, nil
 }
 
 type PackageDox struct {
@@ -47,7 +53,7 @@ type PackageDox struct {
 	Files []FileDox `json:"files"`
 }
 
-func NewPackageDox(pkg ast.Package) PackageDox {
+func NewPackageDox(pkg ast.Package) (PackageDox, error) {
 	var decls []DeclDox
 	var files []FileDox
 
@@ -55,7 +61,11 @@ func NewPackageDox(pkg ast.Package) PackageDox {
 		files = append(files, NewFileDox(*file))
 
 		for _, decl := range file.Decls {
-			d, ok := NewDeclDox(decl)
+			d, ok, err := NewDeclDox(decl)
+			if err != nil {
+				return PackageDox{}, err
+			}
+
 			if !ok {
 				continue
 			}
@@ -68,7 +78,7 @@ func NewPackageDox(pkg ast.Package) PackageDox {
 		Name:  pkg.Name,
 		Decls: decls,
 		Files: files,
-	}
+	}, nil
 }
 
 type FileDox struct {
@@ -84,34 +94,122 @@ func NewFileDox(file ast.File) FileDox {
 }
 
 type DeclDox struct {
-	FuncDecl *FuncDox `json:"func"`
+	FuncDecl *FuncDox     `json:"func"`
+	VarGroup *VarGroupDox `json:"var_group"`
 }
 
-func NewDeclDox(decl ast.Decl) (DeclDox, bool) {
+type VarGroupDox struct {
+	Doc   string   `json:"doc"`
+	Items []VarDox `json:"items"`
+}
+
+func NewDeclDox(decl ast.Decl) (DeclDox, bool, error) {
 	switch decl := decl.(type) {
 	case *ast.FuncDecl:
-		dox := NewFuncDox(*decl)
+		dox, err := NewFuncDox(*decl)
+		if err != nil {
+			return DeclDox{}, false, err
+		}
 
 		return DeclDox{
 			FuncDecl: &dox,
-		}, decl.Name.IsExported()
+		}, decl.Name.IsExported(), nil
+	case *ast.GenDecl:
+		if decl.Tok.String() == "var" {
+			var vars []VarDox
+
+			for _, spec := range decl.Specs {
+				vr, err := NewVarDox(*spec.(*ast.ValueSpec))
+				if err != nil {
+					return DeclDox{}, false, err
+				}
+
+				vars = append(vars, vr)
+			}
+
+			group := VarGroupDox{
+				Doc:   decl.Doc.Text(),
+				Items: vars,
+			}
+
+			return DeclDox{
+				VarGroup: &group,
+			}, true, nil
+		}
+
+		return DeclDox{}, false, nil
 	default:
-		return DeclDox{}, false
+		return DeclDox{}, false, nil
 	}
 }
 
 type FuncDox struct {
-	Name     string            `json:"name"`
-	Doc      *ast.CommentGroup `json:"doc"`
-	Recv     *ast.FieldList    `json:"recv"`
-	FuncType ast.FuncType      `json:"type"`
+	Name     string   `json:"name"`
+	Doc      string   `json:"doc"`
+	RecvType *TypeDox `json:"recv_type"`
+	//FuncType ast.FuncType `json:"type"`
 }
 
-func NewFuncDox(decl ast.FuncDecl) FuncDox {
+func NewFuncDox(decl ast.FuncDecl) (FuncDox, error) {
+	recv := new(TypeDox)
+	if decl.Recv != nil && len(decl.Recv.List) > 0 {
+		typ, err := NewTypeDox(decl.Recv.List[0].Type)
+		if err != nil {
+			return FuncDox{}, err
+		}
+
+		recv = &typ
+	}
+
 	return FuncDox{
 		Name:     decl.Name.Name,
-		Doc:      decl.Doc,
-		Recv:     decl.Recv,
-		FuncType: *decl.Type,
+		Doc:      decl.Doc.Text(),
+		RecvType: recv,
+		//FuncType: *decl.Type,
+	}, nil
+}
+
+type VarDox struct {
+	Doc   string   `json:"doc"`
+	Names []string `json:"names"`
+	Type  TypeDox  `json:"type"`
+}
+
+func NewVarDox(spec ast.ValueSpec) (VarDox, error) {
+	var names []string
+	for _, name := range spec.Names {
+		if !name.IsExported() {
+			continue
+		}
+
+		names = append(names, name.Name)
+	}
+
+	typ, err := NewTypeDox(spec.Type)
+	if err != nil {
+		return VarDox{}, err
+	}
+
+	return VarDox{
+		Doc:   spec.Doc.Text(),
+		Names: names,
+		Type:  typ,
+	}, nil
+}
+
+type TypeDox struct {
+	Ident *string `json:"ident"`
+}
+
+func NewTypeDox(expr ast.Expr) (TypeDox, error) {
+	switch expr := expr.(type) {
+	case *ast.Ident:
+		val := expr.Name
+
+		return TypeDox{
+			Ident: &val,
+		}, nil
+	default:
+		return TypeDox{}, fmt.Errorf("Unsupported expr: %+v", expr)
 	}
 }

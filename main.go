@@ -57,17 +57,20 @@ func serves(pkgs astwrapper.Packages) error {
 }
 
 func run(path string, serveFlag bool) error {
-	pkgs, err := astwrapper.LoadPackages(path)
-	if err != nil {
-		return err
-	}
-
 	dx, err := dox.LoadPackages(path)
 	if err != nil {
 		return err
 	}
-	j, _ := dx.Json()
+	j, err := dx.Json()
+	if err != nil {
+		return err
+	}
 	println(j)
+
+	pkgs, err := astwrapper.LoadPackages(path)
+	if err != nil {
+		return err
+	}
 
 	if serveFlag {
 		if err := serves(pkgs); err != nil {
