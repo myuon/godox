@@ -144,10 +144,10 @@ func NewDeclDox(decl ast.Decl) (DeclDox, bool, error) {
 }
 
 type FuncDox struct {
-	Name     string   `json:"name"`
-	Doc      string   `json:"doc,omitempty"`
-	RecvType *TypeDox `json:"recv_type,omitempty"`
-	//FuncType ast.FuncType `json:"type"`
+	Name       string    `json:"name"`
+	Doc        string    `json:"doc,omitempty"`
+	RecvType   *TypeDox  `json:"recv_type,omitempty"`
+	ParamTypes []TypeDox `json:"param_types,omitempty"`
 }
 
 func NewFuncDox(decl ast.FuncDecl) (FuncDox, error) {
@@ -167,11 +167,21 @@ func NewFuncDox(decl ast.FuncDecl) (FuncDox, error) {
 		return FuncDox{}, err
 	}
 
+	var params []TypeDox
+	for _, field := range decl.Type.Params.List {
+		ty, err := NewTypeDox(field.Type)
+		if err != nil {
+			return FuncDox{}, err
+		}
+
+		params = append(params, ty)
+	}
+
 	return FuncDox{
-		Name:     decl.Name.Name,
-		Doc:      decl.Doc.Text(),
-		RecvType: recv,
-		//FuncType: *decl.Type,
+		Name:       decl.Name.Name,
+		Doc:        decl.Doc.Text(),
+		RecvType:   recv,
+		ParamTypes: params,
 	}, nil
 }
 
@@ -204,7 +214,15 @@ func NewVarDox(spec ast.ValueSpec) (VarDox, error) {
 }
 
 type TypeDox struct {
-	Ident *string `json:"ident,omitempty"`
+	Ident        *string          `json:"ident,omitempty"`
+	ArrayType    *TypeDox         `json:"array,omitempty"`
+	SelectorType *SelectorTypeDox `json:"selector,omitempty"`
+	PointerType  *TypeDox         `json:"pointer,omitempty"`
+}
+
+type SelectorTypeDox struct {
+	Expr   TypeDox `json:"expr"`
+	Select string  `json:"select"`
 }
 
 func NewTypeDox(expr ast.Expr) (TypeDox, error) {
@@ -214,6 +232,38 @@ func NewTypeDox(expr ast.Expr) (TypeDox, error) {
 
 		return TypeDox{
 			Ident: &val,
+		}, nil
+	case *ast.ArrayType:
+		val, err := NewTypeDox(expr.Elt)
+		if err != nil {
+			return TypeDox{}, err
+		}
+
+		return TypeDox{
+			ArrayType: &val,
+		}, nil
+	case *ast.SelectorExpr:
+		body, err := NewTypeDox(expr.X)
+		if err != nil {
+			return TypeDox{}, err
+		}
+
+		sel := SelectorTypeDox{
+			Expr:   body,
+			Select: expr.Sel.Name,
+		}
+
+		return TypeDox{
+			SelectorType: &sel,
+		}, nil
+	case *ast.StarExpr:
+		val, err := NewTypeDox(expr.X)
+		if err != nil {
+			return TypeDox{}, err
+		}
+
+		return TypeDox{
+			PointerType: &val,
 		}, nil
 	default:
 		return TypeDox{}, fmt.Errorf("Unsupported expr: %+v", expr)
