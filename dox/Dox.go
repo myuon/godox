@@ -28,7 +28,7 @@ type PackagesDox struct {
 }
 
 func (d PackagesDox) Json() (string, error) {
-	out, err := json.Marshal(&d)
+	out, err := json.MarshalIndent(&d, "", "  ")
 	return string(out), err
 }
 
