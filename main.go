@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/myuon/godox/dox"
 	"html/template"
 	"net/http"
 
@@ -60,6 +61,13 @@ func run(path string, serveFlag bool) error {
 	if err != nil {
 		return err
 	}
+
+	dx, err := dox.LoadPackages(path)
+	if err != nil {
+		return err
+	}
+	j, _ := dx.Json()
+	println(j)
 
 	if serveFlag {
 		if err := serves(pkgs); err != nil {
