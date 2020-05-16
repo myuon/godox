@@ -83,7 +83,7 @@ func NewPackageDox(pkg ast.Package) (PackageDox, error) {
 
 type FileDox struct {
 	Name string `json:"name"`
-	Doc  string `json:"doc"`
+	Doc  string `json:"doc,omitempty"`
 }
 
 func NewFileDox(file ast.File) FileDox {
@@ -99,7 +99,7 @@ type DeclDox struct {
 }
 
 type VarGroupDox struct {
-	Doc   string   `json:"doc"`
+	Doc   string   `json:"doc,omitempty"`
 	Items []VarDox `json:"items"`
 }
 
@@ -145,20 +145,26 @@ func NewDeclDox(decl ast.Decl) (DeclDox, bool, error) {
 
 type FuncDox struct {
 	Name     string   `json:"name"`
-	Doc      string   `json:"doc"`
+	Doc      string   `json:"doc,omitempty"`
 	RecvType *TypeDox `json:"recv_type,omitempty"`
 	//FuncType ast.FuncType `json:"type"`
 }
 
 func NewFuncDox(decl ast.FuncDecl) (FuncDox, error) {
-	recv := new(TypeDox)
-	if decl.Recv != nil && len(decl.Recv.List) > 0 {
-		typ, err := NewTypeDox(decl.Recv.List[0].Type)
-		if err != nil {
-			return FuncDox{}, err
+	recv, err := (func() (*TypeDox, error) {
+		if decl.Recv != nil && len(decl.Recv.List) > 0 {
+			typ, err := NewTypeDox(decl.Recv.List[0].Type)
+			if err != nil {
+				return nil, err
+			}
+
+			return &typ, err
 		}
 
-		recv = &typ
+		return nil, nil
+	})()
+	if err != nil {
+		return FuncDox{}, err
 	}
 
 	return FuncDox{
@@ -170,7 +176,7 @@ func NewFuncDox(decl ast.FuncDecl) (FuncDox, error) {
 }
 
 type VarDox struct {
-	Doc   string   `json:"doc"`
+	Doc   string   `json:"doc,omitempty"`
 	Names []string `json:"names"`
 	Type  TypeDox  `json:"type"`
 }
