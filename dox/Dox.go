@@ -82,20 +82,20 @@ func NewPackageDox(pkg ast.Package) (PackageDox, error) {
 }
 
 type FileDox struct {
-	Name string            `json:"name"`
-	Doc  *ast.CommentGroup `json:"doc"`
+	Name string `json:"name"`
+	Doc  string `json:"doc"`
 }
 
 func NewFileDox(file ast.File) FileDox {
 	return FileDox{
 		Name: file.Name.Name,
-		Doc:  file.Doc,
+		Doc:  file.Doc.Text(),
 	}
 }
 
 type DeclDox struct {
-	FuncDecl *FuncDox     `json:"func"`
-	VarGroup *VarGroupDox `json:"var_group"`
+	FuncDecl *FuncDox     `json:"func,omitempty"`
+	VarGroup *VarGroupDox `json:"var_group,omitempty"`
 }
 
 type VarGroupDox struct {
@@ -146,7 +146,7 @@ func NewDeclDox(decl ast.Decl) (DeclDox, bool, error) {
 type FuncDox struct {
 	Name     string   `json:"name"`
 	Doc      string   `json:"doc"`
-	RecvType *TypeDox `json:"recv_type"`
+	RecvType *TypeDox `json:"recv_type,omitempty"`
 	//FuncType ast.FuncType `json:"type"`
 }
 
@@ -198,7 +198,7 @@ func NewVarDox(spec ast.ValueSpec) (VarDox, error) {
 }
 
 type TypeDox struct {
-	Ident *string `json:"ident"`
+	Ident *string `json:"ident,omitempty"`
 }
 
 func NewTypeDox(expr ast.Expr) (TypeDox, error) {
