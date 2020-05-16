@@ -23,18 +23,18 @@ func prints(pkgs astwrapper.Packages) error {
 
 		fmt.Printf("\n\nFunctions\n-----\n")
 		for _, decl := range pkg.GetFuncDecls() {
-			fmt.Printf("%s\t", decl.Name.String())
+			fmt.Printf("%s\t%s\n", decl.Name.String(), decl.Doc.Text())
 		}
 
 		fmt.Printf("\n\nTypes\n-----\n")
 		for _, spec := range pkg.GetTypeSpecs() {
-			fmt.Printf("%s\t", spec.Name.String())
+			fmt.Printf("%s\t%s\n", spec.Name.String(), spec.Doc.Text())
 		}
 
 		fmt.Printf("\n\nVariables\n-----\n")
 		for _, vg := range pkg.GetValueGroups() {
 			for _, spec := range vg.Specs {
-				fmt.Printf("%+v\n", spec.Names)
+				fmt.Printf("%+v\t%s\n", spec.Names, spec.Doc.Text())
 			}
 		}
 	}
@@ -62,11 +62,11 @@ func run(path string, serveFlag bool) error {
 	}
 
 	if serveFlag {
-		if err := prints(pkgs); err != nil {
+		if err := serves(pkgs); err != nil {
 			return err
 		}
 	} else {
-		if err := serves(pkgs); err != nil {
+		if err := prints(pkgs); err != nil {
 			return err
 		}
 	}
