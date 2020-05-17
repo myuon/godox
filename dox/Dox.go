@@ -3,6 +3,7 @@ package dox
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/myuon/godox/parserExtra"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -10,7 +11,7 @@ import (
 
 func LoadPackages(path string) (PackagesDox, error) {
 	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, path, nil, parser.ParseComments)
+	pkgs, err := parserExtra.ParseDirRecursively(fset, path, nil, parser.ParseComments)
 	if err != nil {
 		return PackagesDox{}, err
 	}
