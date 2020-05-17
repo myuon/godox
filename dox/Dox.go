@@ -188,7 +188,7 @@ func NewFuncDox(decl ast.FuncDecl) (FuncDox, error) {
 type VarDox struct {
 	Doc   string   `json:"doc,omitempty"`
 	Names []string `json:"names"`
-	Type  TypeDox  `json:"type"`
+	Type  *TypeDox `json:"type,omitempty"`
 }
 
 func NewVarDox(spec ast.ValueSpec) (VarDox, error) {
@@ -201,7 +201,18 @@ func NewVarDox(spec ast.ValueSpec) (VarDox, error) {
 		names = append(names, name.Name)
 	}
 
-	typ, err := NewTypeDox(spec.Type)
+	typ, err := func() (*TypeDox, error) {
+		if spec.Type == nil {
+			return nil, nil
+		}
+
+		typ, err := NewTypeDox(spec.Type)
+		if err != nil {
+			return nil, err
+		}
+
+		return &typ, nil
+	}()
 	if err != nil {
 		return VarDox{}, err
 	}

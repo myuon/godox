@@ -96,81 +96,97 @@
 
     <main>
       <section>
-      {{ range $k, $pkg := .Packages }}
-        <header><strong>package</strong> {{ $pkg.Name }}</header>
-        <ul>
-        {{ range $k, $file := $pkg.Files }}
-          <li>{{ $file.Name }}.go</li>
-        {{ end }}
-        </ul>
-      {{ end }}
-      </section>
+        {{ range $k, $pkg := .Packages }}
+        <header>
+          <p><strong>package</strong> {{ $pkg.Name }}</p>
+        </header>
 
-      <section>
-        <header><strong>package</strong> {{ .Package }}</header>
-      </section>
-
-      <section class="go-elements index-functions">
-        <header><h3>Functions</h3></header>
-        <table>
-          <tbody>
-            {{ range $k, $v := .Funcs }}
-            <tr>
-              <td><a href="#{{ $v.Name }}">{{ $v.Name }}</a></td>
-              <td>{{ $v.Doc }}</td>
-            </tr>
+        <div>
+          <ul>
+            {{ range $k, $file := $pkg.Files }}
+            <li>{{ $file.Name }}.go</li>
             {{ end }}
-          </tbody>
-        </table>
-      </section>
+          </ul>
+        </div>
 
-      <section class="go-elements type-declarations">
-        <header><h3>Types</h3></header>
-        <table>
-          <tbody>
-            {{ range $k, $v := .Types }}
-            <tr>
-              <td><a href="#{{ $v.Name }}">{{ $v.Name }}</a></td>
-              <td>{{ $v.Doc }}</td>
-            </tr>
+        <div>
+          {{ range $k, $decl := $pkg.Decls }}
+          <p>{{ $decl.VarGroup.Doc }}</p>
+
+            {{ range $k, $var := $decl.VarGroup.Items }}
+            <header>
+              <h4>{{ $var.Names }}</h4>
+              <p>{{ $var.Doc }}</p>
+            </header>
             {{ end }}
-          </tbody>
-        </table>
-      </section>
+          {{ end }}
+        </div>
 
-      <section class="go-elements var-declarations">
-        <header><h3>Variables</h3></header>
-        <table>
-          <tbody>
-            {{ range $k, $v := .Vars }}
-            <tr>
-              <td>-</td>
-              <td>{{ $v.Doc }}</td>
-            </tr>
-            {{ range $k, $c := $v.Contents }} {{ range $k, $name := $c.Names }}
-            <tr>
-              <td><a href="#{{ $name }}">{{ $name }}</a></td>
-              <td>{{ $c.Doc }}</td>
-            </tr>
-            {{ end }} {{ end }} {{ end }}
-          </tbody>
-        </table>
-      </section>
+        <section class="go-elements index-functions">
+          <header><h3>Functions</h3></header>
+          <table>
+            <tbody>
+              {{ range $k, $v := $pkg.Funcs }}
+              <tr>
+                <td><a href="#{{ $v.Name }}">{{ $v.Name }}</a></td>
+                <td>{{ $v.Doc }}</td>
+              </tr>
+              {{ end }}
+            </tbody>
+          </table>
+        </section>
 
-      <section>
-        {{ range $k, $v := .Funcs }}
-        <div class="function" id="{{ $v.Name }}">
-          <header><strong>func</strong> {{ $v.Name }}</header>
-          <div class="type">
-            <code>{{ $v.Type }}</code>
+        <section class="go-elements type-declarations">
+          <header><h3>Types</h3></header>
+          <table>
+            <tbody>
+              {{ range $k, $v := .Types }}
+              <tr>
+                <td><a href="#{{ $v.Name }}">{{ $v.Name }}</a></td>
+                <td>{{ $v.Doc }}</td>
+              </tr>
+              {{ end }}
+            </tbody>
+          </table>
+        </section>
+
+        <section class="go-elements var-declarations">
+          <header><h3>Variables</h3></header>
+          <table>
+            <tbody>
+              {{ range $k, $v := .Vars }}
+              <tr>
+                <td>-</td>
+                <td>{{ $v.Doc }}</td>
+              </tr>
+              {{ range $k, $c := $v.Contents }}
+              {{ range $k, $name := $c.Names }}
+              <tr>
+                <td><a href="#{{ $name }}">{{ $name }}</a></td>
+                <td>{{ $c.Doc }}</td>
+              </tr>
+              {{ end }} {{ end }} {{ end }}
+            </tbody>
+          </table>
+        </section>
+
+        <section>
+          {{ range $k, $v := .Funcs }}
+          <div class="function" id="{{ $v.Name }}">
+            <header><strong>func</strong> {{ $v.Name }}</header>
+            <div class="type">
+              <code>{{ $v.Type }}</code>
+            </div>
+            <div><p>{{ $v.Doc }}</p></div>
           </div>
-          <div><p>{{ $v.Doc }}</p></div>
-        </div>
-        {{ end }} {{ range $k, $v := .Types }}
-        <div class="function" id="{{ $v.Name }}">
-          <header><strong>type</strong> {{ $v.Name }}</header>
-          <div><p>{{ $v.Doc }}</p></div>
-        </div>
+          {{ end }} {{ range $k, $v := .Types }}
+          <div class="function" id="{{ $v.Name }}">
+            <header><strong>type</strong> {{ $v.Name }}</header>
+            <div><p>{{ $v.Doc }}</p></div>
+          </div>
+          {{ end }}
+        </section>
+
         {{ end }}
       </section>
     </main>
