@@ -6,8 +6,6 @@ import (
 	"github.com/myuon/godox/dox"
 	"html/template"
 	"net/http"
-
-	"github.com/myuon/godox/astwrapper"
 )
 
 // Define configurations
@@ -16,13 +14,11 @@ var (
 	TemplatePath = "./template/index.html"
 )
 
-func serves(pkgs astwrapper.Packages) error {
+func serves(pkgs dox.PackagesDox) error {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		tpl := template.Must(template.ParseFiles(TemplatePath))
 
-		tpl.Execute(w, map[string]interface{}{
-			"Packages": pkgs,
-		})
+		tpl.Execute(w, pkgs)
 	})
 	println("Listening on http://localhost:8080...")
 
@@ -36,7 +32,9 @@ func run(path string, serveFlag bool) error {
 	}
 
 	if serveFlag {
-		panic("not implemented yet")
+		if err := serves(dx); err != nil {
+			return err
+		}
 	} else {
 		jn, err := dx.Json()
 		if err != nil {
