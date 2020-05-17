@@ -230,11 +230,17 @@ type TypeDox struct {
 	ArrayType    *TypeDox         `json:"array,omitempty"`
 	SelectorType *SelectorTypeDox `json:"selector,omitempty"`
 	PointerType  *TypeDox         `json:"pointer,omitempty"`
+	FuncType     *FuncTypeDox     `json:"func,omitempty"`
 }
 
 type SelectorTypeDox struct {
 	Expr   TypeDox `json:"expr"`
 	Select string  `json:"select"`
+}
+
+type FuncTypeDox struct {
+	Params  []TypeDox `json:"params"`
+	Results []TypeDox `json:"result"`
 }
 
 func NewTypeDox(expr ast.Expr) (TypeDox, error) {
@@ -276,6 +282,35 @@ func NewTypeDox(expr ast.Expr) (TypeDox, error) {
 
 		return TypeDox{
 			PointerType: &val,
+		}, nil
+	case *ast.FuncType:
+		var params []TypeDox
+		for _, p := range expr.Params.List {
+			ty, err := NewTypeDox(p.Type)
+			if err != nil {
+				return TypeDox{}, err
+			}
+
+			params = append(params, ty)
+		}
+
+		var results []TypeDox
+		for _, r := range expr.Results.List {
+			ty, err := NewTypeDox(r.Type)
+			if err != nil {
+				return TypeDox{}, err
+			}
+
+			results = append(results, ty)
+		}
+
+		typ := FuncTypeDox{
+			Params:  params,
+			Results: results,
+		}
+
+		return TypeDox{
+			FuncType: &typ,
 		}, nil
 	default:
 		return TypeDox{}, fmt.Errorf("Unsupported expr: %+v", expr)
