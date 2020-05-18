@@ -133,7 +133,14 @@
         <section class="go-elements type-declarations">
           <header><h3>Types</h3></header>
           <table>
-            <tbody></tbody>
+            <tbody>
+              {{ range $k, $v := $pkg.CollectTypeDeclDox }}
+              <tr>
+                <td><a href="#{{ $v.Name }}">{{ $v.Name }}</a></td>
+                <td>{{ $v.Doc }}</td>
+              </tr>
+              {{ end }}
+            </tbody>
           </table>
         </section>
 

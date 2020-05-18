@@ -94,6 +94,17 @@ func (p PackageDox) CollectVarGroupDox() []VarGroupDox {
 	return ds
 }
 
+func (p PackageDox) CollectTypeDeclDox() []TypeDeclDox {
+	var ds []TypeDeclDox
+	for _, d := range p.Decls {
+		if d.TypeDecl != nil {
+			ds = append(ds, *d.TypeDecl)
+		}
+	}
+
+	return ds
+}
+
 type FileDox struct {
 	Name string `json:"name"`
 	Doc  string `json:"doc,omitempty"`
@@ -109,6 +120,7 @@ func NewFileDox(file ast.File) FileDox {
 type DeclDox struct {
 	FuncDecl *FuncDox     `json:"func,omitempty"`
 	VarGroup *VarGroupDox `json:"var_group,omitempty"`
+	TypeDecl *TypeDeclDox `json:"type,omitempty"`
 }
 
 type VarGroupDox struct {
@@ -150,10 +162,41 @@ func NewDeclDox(decl ast.Decl) (DeclDox, bool, error) {
 			}, true, nil
 		}
 
+		if decl.Tok.String() == "type" {
+			spec := *decl.Specs[0].(*ast.TypeSpec)
+			d, err := NewTypeDeclDox(spec)
+			if err != nil {
+				return DeclDox{}, false, err
+			}
+
+			return DeclDox{
+				TypeDecl: &d,
+			}, spec.Name.IsExported(), nil
+		}
+
 		return DeclDox{}, false, nil
 	default:
 		return DeclDox{}, false, nil
 	}
+}
+
+type TypeDeclDox struct {
+	Name string  `json:"name"`
+	Doc  string  `json:"doc,omitempty"`
+	Type TypeDox `json:"type"`
+}
+
+func NewTypeDeclDox(spec ast.TypeSpec) (TypeDeclDox, error) {
+	typ, err := NewTypeDox(spec.Type)
+	if err != nil {
+		return TypeDeclDox{}, err
+	}
+
+	return TypeDeclDox{
+		Name: spec.Name.Name,
+		Doc:  spec.Doc.Text(),
+		Type: typ,
+	}, nil
 }
 
 type FuncDox struct {
@@ -248,6 +291,7 @@ type TypeDox struct {
 	PointerType  *TypeDox         `json:"pointer,omitempty"`
 	FuncType     *FuncTypeDox     `json:"func,omitempty"`
 	MapType      *MapTypeDox      `json:"map,omitempty"`
+	StructType   *StructTypeDox   `json:"struct,omitempty"`
 }
 
 type SelectorTypeDox struct {
@@ -263,6 +307,16 @@ type FuncTypeDox struct {
 type MapTypeDox struct {
 	Key   TypeDox `json:"key"`
 	Value TypeDox `json:"value"`
+}
+
+type StructTypeDox struct {
+	Fields []StructFieldDox `json:"fields"`
+}
+
+type StructFieldDox struct {
+	Names []string `json:"name"`
+	Type  TypeDox  `json:"type"`
+	Tag   *string  `json:"tag"`
 }
 
 func NewTypeDox(expr ast.Expr) (TypeDox, error) {
@@ -352,6 +406,41 @@ func NewTypeDox(expr ast.Expr) (TypeDox, error) {
 
 		return TypeDox{
 			MapType: &typ,
+		}, nil
+	case *ast.StructType:
+		var fields []StructFieldDox
+		for _, f := range expr.Fields.List {
+			var names []string
+			for _, name := range f.Names {
+				names = append(names, name.Name)
+			}
+
+			ty, err := NewTypeDox(f.Type)
+			if err != nil {
+				return TypeDox{}, err
+			}
+
+			tag := func() *string {
+				if f.Tag == nil {
+					return nil
+				}
+
+				return &f.Tag.Value
+			}()
+
+			fields = append(fields, StructFieldDox{
+				Names: names,
+				Type:  ty,
+				Tag:   tag,
+			})
+		}
+
+		ty := StructTypeDox{
+			Fields: fields,
+		}
+
+		return TypeDox{
+			StructType: &ty,
 		}, nil
 	default:
 		return TypeDox{}, fmt.Errorf("Unsupported expr: %+v", expr)
