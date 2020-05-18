@@ -16,12 +16,7 @@ func LoadPackages(path string) (PackagesDox, error) {
 		return PackagesDox{}, err
 	}
 
-	var pkgList []ast.Package
-	for _, v := range pkgs {
-		pkgList = append(pkgList, *v)
-	}
-
-	return NewPackagesDox(pkgList)
+	return NewPackagesDox(pkgs)
 }
 
 type PackagesDox struct {
@@ -33,11 +28,11 @@ func (d PackagesDox) Json() (string, error) {
 	return string(out), err
 }
 
-func NewPackagesDox(pkgs []ast.Package) (PackagesDox, error) {
+func NewPackagesDox(pkgs map[string]*ast.Package) (PackagesDox, error) {
 	var dox []PackageDox
 
 	for _, pkg := range pkgs {
-		p, err := NewPackageDox(pkg)
+		p, err := NewPackageDox(*pkg)
 		if err != nil {
 			return PackagesDox{}, err
 		}
@@ -51,16 +46,12 @@ func NewPackagesDox(pkgs []ast.Package) (PackagesDox, error) {
 type PackageDox struct {
 	Name  string    `json:"name"`
 	Decls []DeclDox `json:"decls"`
-	Files []FileDox `json:"files"`
 }
 
 func NewPackageDox(pkg ast.Package) (PackageDox, error) {
 	var decls []DeclDox
-	var files []FileDox
 
 	for _, file := range pkg.Files {
-		files = append(files, NewFileDox(*file))
-
 		for _, decl := range file.Decls {
 			d, ok, err := NewDeclDox(decl)
 			if err != nil {
@@ -78,7 +69,6 @@ func NewPackageDox(pkg ast.Package) (PackageDox, error) {
 	return PackageDox{
 		Name:  pkg.Name,
 		Decls: decls,
-		Files: files,
 	}, nil
 }
 
@@ -253,6 +243,7 @@ type TypeDox struct {
 	SelectorType *SelectorTypeDox `json:"selector,omitempty"`
 	PointerType  *TypeDox         `json:"pointer,omitempty"`
 	FuncType     *FuncTypeDox     `json:"func,omitempty"`
+	MapType      *MapTypeDox      `json:"map,omitempty"`
 }
 
 type SelectorTypeDox struct {
@@ -263,6 +254,11 @@ type SelectorTypeDox struct {
 type FuncTypeDox struct {
 	Params  []TypeDox `json:"params"`
 	Results []TypeDox `json:"result"`
+}
+
+type MapTypeDox struct {
+	Key   TypeDox `json:"key"`
+	Value TypeDox `json:"value"`
 }
 
 func NewTypeDox(expr ast.Expr) (TypeDox, error) {
@@ -333,6 +329,25 @@ func NewTypeDox(expr ast.Expr) (TypeDox, error) {
 
 		return TypeDox{
 			FuncType: &typ,
+		}, nil
+	case *ast.MapType:
+		key, err := NewTypeDox(expr.Key)
+		if err != nil {
+			return TypeDox{}, err
+		}
+
+		value, err := NewTypeDox(expr.Value)
+		if err != nil {
+			return TypeDox{}, err
+		}
+
+		typ := MapTypeDox{
+			Key:   key,
+			Value: value,
+		}
+
+		return TypeDox{
+			MapType: &typ,
 		}, nil
 	default:
 		return TypeDox{}, fmt.Errorf("Unsupported expr: %+v", expr)

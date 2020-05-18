@@ -113,14 +113,6 @@
           <h2><strong>package</strong> {{ $pkg.Name }}</h2>
         </header>
 
-        <div class="package-info">
-          <ul>
-            {{ range $k, $file := $pkg.Files }}
-            <li>{{ $file.Name }}.go</li>
-            {{ end }}
-          </ul>
-        </div>
-
         <section class="go-elements index-functions">
           <header><h3>Functions</h3></header>
           <table>
