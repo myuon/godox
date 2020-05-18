@@ -82,6 +82,28 @@ func NewPackageDox(pkg ast.Package) (PackageDox, error) {
 	}, nil
 }
 
+func (p PackageDox) CollectFuncDox() []FuncDox {
+	var ds []FuncDox
+	for _, d := range p.Decls {
+		if d.FuncDecl != nil {
+			ds = append(ds, *d.FuncDecl)
+		}
+	}
+
+	return ds
+}
+
+func (p PackageDox) CollectVarGroupDox() []VarGroupDox {
+	var ds []VarGroupDox
+	for _, d := range p.Decls {
+		if d.VarGroup != nil {
+			ds = append(ds, *d.VarGroup)
+		}
+	}
+
+	return ds
+}
+
 type FileDox struct {
 	Name string `json:"name"`
 	Doc  string `json:"doc,omitempty"`
