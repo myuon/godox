@@ -198,6 +198,10 @@ func NewFuncDox(decl ast.FuncDecl) (FuncDox, error) {
 	}, nil
 }
 
+func (d FuncDox) IsMethod() bool {
+	return d.RecvType != nil
+}
+
 type VarDox struct {
 	Doc   string   `json:"doc,omitempty"`
 	Names []string `json:"names"`

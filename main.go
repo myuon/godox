@@ -18,7 +18,10 @@ func serves(pkgs dox.PackagesDox) error {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		tpl := template.Must(template.ParseFiles(TemplatePath))
 
-		tpl.Execute(w, pkgs)
+		err := tpl.Execute(w, pkgs)
+		if err != nil {
+			panic(err)
+		}
 	})
 	println("Listening on http://localhost:8080...")
 
